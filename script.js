@@ -6,36 +6,78 @@ document.addEventListener('DOMContentLoaded', () => {
     // Referencias a los elementos del DOM
     const btnCalcular = document.getElementById('btnCalcular');
     const textoOperacion = document.getElementById('textoOperacion');
-    
+
+    // Referencias del botón (para el spinner)
+    const btnText = document.getElementById('button-text');
+    const btnSpinner = document.getElementById('spinner');
+
     // Alertas de resultado y error
     const divResultado = document.getElementById('divResultado');
     const resultadoTexto = document.getElementById('resultadoTexto');
     const divError = document.getElementById('divError');
     const errorTexto = document.getElementById('errorTexto');
 
-    const textoOriginalBtn = 'Calcular <i class="bi bi-send ms-1"></i>';
+
+    // --- Funciones de Ayuda ---
+
+    // Función para manejar el estado de carga
+    function setLoading(isLoading) {
+        if (isLoading) {
+            btnCalcular.disabled = true;
+            // Usamos las referencias del HTML que te di en el ejemplo anterior
+            if(btnText && btnSpinner) {
+                btnText.classList.add('d-none');
+                btnSpinner.classList.remove('d-none');
+            } else {
+                // Fallback si usas el HTML original
+                btnCalcular.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Calculando...`;
+            }
+        } else {
+            btnCalcular.disabled = false;
+            if(btnText && btnSpinner) {
+                btnText.classList.remove('d-none');
+                btnSpinner.classList.add('d-none');
+            } else {
+                 // Fallback si usas el HTML original
+                btnCalcular.innerHTML = `Calcular <i class="bi bi-send ms-1"></i>`;
+            }
+        }
+    }
+
+    // Función para mostrar el resultado
+    function showResult(message) {
+        divResultado.style.display = 'block';
+        divError.style.display = 'none';
+        resultadoTexto.textContent = message;
+    }
+
+    // Función para mostrar un error
+    function showError(message) {
+        divResultado.style.display = 'none';
+        divError.style.display = 'block';
+        errorTexto.textContent = message;
+    }
+
+    // --- Lógica Principal ---
 
     btnCalcular.addEventListener('click', () => {
-        const query = textoOperacion.value;
+        const query = textoOperacion.value.trim();
 
-        if (query.trim() === "") {
-            alert("Por favor, escribe una operación.");
+        // 1. Ocultar mensajes anteriores
+        divResultado.style.display = 'none';
+        divError.style.display = 'none';
+
+        if (query === "") {
+            // !! ESTE ES EL ARREGLO !!
+            // En lugar de alert(...), usamos el div de error.
+            showError("Por favor, escribe una operación.");
             return;
         }
 
-        // --- Estado de Carga ---
-        // Ocultar alertas anteriores
-        divResultado.style.display = 'none';
-        divError.style.display = 'none';
-        
-        // Deshabilitar botón y mostrar spinner *dentro* del botón
-        btnCalcular.disabled = true;
-        btnCalcular.innerHTML = `
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            Calculando...
-        `;
+        // 2. Iniciar estado de carga
+        setLoading(true);
 
-        // 2. Enviar la solicitud a n8n
+        // 3. Enviar la solicitud a n8n
         fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
             headers: {
@@ -47,33 +89,25 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(response => {
             if (!response.ok) {
-                // Si la respuesta del servidor no es 200 OK, la tratamos como un error
-                throw new Error(`Error de red: ${response.statusText}`);
+                // Error de servidor (ej: 500)
+                throw new Error(`Error del servidor: ${response.statusText}`);
             }
-            return response.json(); // Intenta parsear la respuesta como JSON
+            return response.json();
         })
         .then(data => {
-            // --- Estado de Éxito ---
-            // Restaurar botón
-            btnCalcular.disabled = false;
-            btnCalcular.innerHTML = textoOriginalBtn;
-
-            // 3. Mostrar el resultado que n8n nos devuelve
-            resultadoTexto.innerText = data.respuestaCalculada;
-            divResultado.style.display = 'block';
+            // 4. Éxito
+            setLoading(false);
+            // Asumimos que n8n devuelve { "respuestaCalculada": "..." }
+            // Si la clave es diferente (ej: "resultado"), cámbiala aquí.
+            showResult(data.respuestaCalculada); 
         })
         .catch(error => {
-            // --- Estado de Error ---
-            // Restaurar botón
-            btnCalcular.disabled = false;
-            btnCalcular.innerHTML = textoOriginalBtn;
-
-            // Manejo de errores (JSON inválido o error de red)
-            console.error('Error:', error);
-            errorTexto.innerText = 'Hubo un error al procesar la solicitud. Revisa la consola para más detalles.';
-            divError.style.display = 'block';
+            // 5. Error (de red, CORS, o JSON inválido)
+            setLoading(false);
+            console.error('Error en fetch:', error);
+            // El error de CORS se mostrará en la consola, y aquí daremos un mensaje genérico.
+            showError('Hubo un error al procesar la solicitud. Revisa la consola (F12).');
         });
     });
 
 });
-
