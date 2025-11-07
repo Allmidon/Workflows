@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // URL DE NODO WEBHOOK EN N8N
-    const N8N_WEBHOOK_URL = "https://fernandaalcantara.app.n8n.cloud/webhook/2b9c4088-7661-4e69-8aa7-b1e92945b1fb";
+    const N8N_WEBHOOK_URL = "https://asc.app.n8n.cloud/webhook/4ead4bdb-631f-4b89-b880-b6502034287b";
 
     // Referencias a los elementos del DOM
     const btnCalcular = document.getElementById('btnCalcular');
@@ -76,3 +76,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
